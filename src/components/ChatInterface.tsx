@@ -13,6 +13,7 @@ function ChatInterface() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [useRag, setUseRag] = useState(true)  // 默认启用 RAG
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -39,10 +40,17 @@ function ChatInterface() {
         userMessage.content,
         sessionId,
         (chunk) => {
-          if (chunk.type === 'session_id' && chunk.data) {
+          if (chunk.type === 'session_id') {
             // 保存 session_id
-            setSessionId(chunk.data)
-          } else if (chunk.type === 'content' && chunk.data) {
+            if (typeof chunk.data === 'string') {
+              setSessionId(chunk.data)
+            }
+          } else if (chunk.type === 'retrieved_docs') {
+            // 检索到文档信息（可选：可以在这里显示提示）
+            if (chunk.data && typeof chunk.data === 'object' && 'count' in chunk.data) {
+              console.log(`检索到 ${chunk.data.count} 个相关文档`)
+            }
+          } else if (chunk.type === 'content' && typeof chunk.data === 'string') {
             // 更新最后一个 assistant 消息的内容
             setMessages(prev => {
               const newMessages = [...prev]
@@ -60,6 +68,9 @@ function ChatInterface() {
           } else if (chunk.type === 'done') {
             setLoading(false)
           }
+        },
+        {
+          useRag: useRag
         }
       )
 
@@ -108,6 +119,19 @@ function ChatInterface() {
 
   return (
     <div className="chat-interface">
+      <div className="rag-toggle-container">
+        <label className="rag-toggle-label">
+          <input
+            type="checkbox"
+            checked={useRag}
+            onChange={(e) => setUseRag(e.target.checked)}
+            className="rag-toggle-input"
+            disabled={loading}
+          />
+          <span className="rag-toggle-slider"></span>
+          <span className="rag-toggle-text">启用 RAG 检索</span>
+        </label>
+      </div>
       <div className="messages-container">
         {messages.length === 0 ? (
           <div className="empty-state">

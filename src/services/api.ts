@@ -3,11 +3,14 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 export interface ChatRequest {
   q: string
   session_id?: string | null
+  use_rag?: boolean  // 是否使用 RAG 检索
+  top_k?: number     // 检索返回的文档数量
+  similarity_threshold?: number  // 相似度阈值
 }
 
 export interface StreamChunk {
-  type: 'session_id' | 'content' | 'done'
-  data?: string
+  type: 'session_id' | 'content' | 'done' | 'retrieved_docs'
+  data?: string | { count?: number }
 }
 
 export interface ChatResponse {
@@ -20,9 +23,19 @@ export type StreamCallback = (chunk: StreamChunk) => void
 export async function sendMessageStream(
   message: string,
   sessionId: string | null | undefined,
-  onChunk: StreamCallback
+  onChunk: StreamCallback,
+  options?: {
+    useRag?: boolean
+    topK?: number
+    similarityThreshold?: number
+  }
 ): Promise<string> {
-  const requestBody: ChatRequest = { q: message }
+  const requestBody: ChatRequest = { 
+    q: message,
+    use_rag: options?.useRag !== false,  // 默认启用 RAG
+    top_k: options?.topK || 5,
+    similarity_threshold: options?.similarityThreshold || 0.1
+  }
   if (sessionId) {
     requestBody.session_id = sessionId
   }
@@ -74,13 +87,13 @@ export async function sendMessageStream(
           try {
             const chunk: StreamChunk = JSON.parse(data)
             
-            if (chunk.type === 'session_id' && chunk.data) {
+            if (chunk.type === 'session_id' && typeof chunk.data === 'string') {
               receivedSessionId = chunk.data
               onChunk(chunk)
-            } else if (chunk.type === 'content' && chunk.data) {
+            } else if (chunk.type === 'content' && typeof chunk.data === 'string') {
               fullContent += chunk.data
               onChunk(chunk)
-            } else if (chunk.type === 'done') {
+            } else if (chunk.type === 'retrieved_docs' || chunk.type === 'done') {
               onChunk(chunk)
             }
           } catch (e) {
@@ -99,8 +112,10 @@ export async function sendMessageStream(
           if (data.trim()) {
             try {
               const chunk: StreamChunk = JSON.parse(data)
-              if (chunk.type === 'content' && chunk.data) {
+              if (chunk.type === 'content' && typeof chunk.data === 'string') {
                 fullContent += chunk.data
+                onChunk(chunk)
+              } else if (chunk.type === 'retrieved_docs' || chunk.type === 'done') {
                 onChunk(chunk)
               }
             } catch (e) {
