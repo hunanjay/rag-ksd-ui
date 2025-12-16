@@ -8,12 +8,16 @@ interface Message {
   content: string
 }
 
-function ChatInterface() {
+interface ChatInterfaceProps {
+  agents?: string[]
+}
+
+function ChatInterface({ agents = [] }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [useRag, setUseRag] = useState(true)  // 默认启用 RAG
+  const [selectedAgent, setSelectedAgent] = useState<string>('rag')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -43,7 +47,7 @@ function ChatInterface() {
           if (chunk.type === 'session_id') {
             // 保存 session_id
             if (typeof chunk.data === 'string') {
-              setSessionId(chunk.data)
+            setSessionId(chunk.data)
             }
           } else if (chunk.type === 'retrieved_docs') {
             // 检索到文档信息（可选：可以在这里显示提示）
@@ -68,9 +72,6 @@ function ChatInterface() {
           } else if (chunk.type === 'done') {
             setLoading(false)
           }
-        },
-        {
-          useRag: useRag
         }
       )
 
@@ -119,18 +120,24 @@ function ChatInterface() {
 
   return (
     <div className="chat-interface">
-      <div className="rag-toggle-container">
-        <label className="rag-toggle-label">
-          <input
-            type="checkbox"
-            checked={useRag}
-            onChange={(e) => setUseRag(e.target.checked)}
-            className="rag-toggle-input"
-            disabled={loading}
-          />
-          <span className="rag-toggle-slider"></span>
-          <span className="rag-toggle-text">启用 RAG 检索</span>
-        </label>
+      <div className="chat-toolbar">
+        {agents.length > 0 && (
+          <div className="agent-selector">
+            <label htmlFor="agent-select">当前 Agent：</label>
+            <select
+              id="agent-select"
+              value={selectedAgent}
+              onChange={(e) => setSelectedAgent(e.target.value)}
+              disabled={loading}
+            >
+              {agents.map((agent) => (
+                <option key={agent} value={agent}>
+                  {agent}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="messages-container">
         {messages.length === 0 ? (
