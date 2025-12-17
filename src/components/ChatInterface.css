@@ -52,8 +52,9 @@
 }
 
 .messages-container {
-  flex: 1;
-  overflow-y: auto;
+  height: 500px; /* 固定高度 */
+  overflow-y: auto; /* 启用垂直滚动条 */
+  overflow-x: hidden; /* 隐藏水平滚动条 */
   padding: 1.5rem 1.75rem 1.5rem;
   display: flex;
   flex-direction: column;
@@ -202,20 +203,28 @@
   }
 }
 
-/* 滚动条样式 */
+/* 滚动条样式 - 美化滚动条 */
 .messages-container::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 .messages-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 5px;
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.6);
+  border-radius: 5px;
+  border: 2px solid rgba(241, 245, 249, 0.8);
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: rgba(100, 116, 139, 0.8);
+}
+
+/* Firefox 滚动条样式 */
+.messages-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.6) rgba(241, 245, 249, 0.8);
 }

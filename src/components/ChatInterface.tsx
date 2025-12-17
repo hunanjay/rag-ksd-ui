@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { sendMessageStream, clearHistory as clearHistoryApi } from '../services/api'
+import { sendAgentMessage, clearAgentHistory, type StreamCallback } from '../services/api'
 import MarkdownRenderer from './MarkdownRenderer'
 import './ChatInterface.css'
 
@@ -16,9 +16,20 @@ function ChatInterface({ agents = [] }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [selectedAgent, setSelectedAgent] = useState<string>('rag')
+  // 为每个 agent 维护独立的 session_id
+  const [agentSessions, setAgentSessions] = useState<Record<string, string | null>>({})
+  // 默认选中第一个 agent，如果没有则使用 'rag'
+  const [selectedAgent, setSelectedAgent] = useState<string>(() => {
+    return agents.length > 0 ? agents[0] : 'rag'
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // 当 agents 列表更新时，如果当前选中的 agent 不在列表中，切换到第一个
+  useEffect(() => {
+    if (agents.length > 0 && !agents.includes(selectedAgent)) {
+      setSelectedAgent(agents[0])
+    }
+  }, [agents, selectedAgent])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -27,6 +38,13 @@ function ChatInterface({ agents = [] }: ChatInterfaceProps) {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // 当切换 agent 时，重置消息（可选：也可以保留历史）
+  useEffect(() => {
+    // 切换 agent 时可以选择清空消息或保留
+    // 这里选择清空，如果需要保留历史可以注释掉
+    // setMessages([])
+  }, [selectedAgent])
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
@@ -40,45 +58,62 @@ function ChatInterface({ agents = [] }: ChatInterfaceProps) {
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
     try {
-      const receivedSessionId = await sendMessageStream(
-        userMessage.content,
-        sessionId,
-        (chunk) => {
-          if (chunk.type === 'session_id') {
-            // 保存 session_id
-            if (typeof chunk.data === 'string') {
-            setSessionId(chunk.data)
-            }
-          } else if (chunk.type === 'retrieved_docs') {
-            // 检索到文档信息（可选：可以在这里显示提示）
-            if (chunk.data && typeof chunk.data === 'object' && 'count' in chunk.data) {
-              console.log(`检索到 ${chunk.data.count} 个相关文档`)
-            }
-          } else if (chunk.type === 'content' && typeof chunk.data === 'string') {
-            // 更新最后一个 assistant 消息的内容
-            setMessages(prev => {
-              const newMessages = [...prev]
-              const lastIndex = newMessages.length - 1
-              if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
-                newMessages[lastIndex] = {
-                  ...newMessages[lastIndex],
-                  content: newMessages[lastIndex].content + chunk.data
-                }
-              }
-              return newMessages
-            })
-            // 流式更新时也自动滚动到底部
-            setTimeout(() => scrollToBottom(), 0)
-          } else if (chunk.type === 'done') {
-            setLoading(false)
+      // 获取当前 agent 的 session_id
+      const currentSessionId = agentSessions[selectedAgent] || null
+
+      // 流式回调处理
+      const onChunk: StreamCallback = (chunk) => {
+        if (chunk.type === 'session_id') {
+          // 保存 session_id
+          if (typeof chunk.data === 'string') {
+            setAgentSessions(prev => ({
+              ...prev,
+              [selectedAgent]: chunk.data as string,
+            }))
           }
+        } else if (chunk.type === 'content' && typeof chunk.data === 'string') {
+          // 更新最后一个 assistant 消息的内容
+          setMessages(prev => {
+            const newMessages = [...prev]
+            const lastIndex = newMessages.length - 1
+            if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+              newMessages[lastIndex] = {
+                ...newMessages[lastIndex],
+                content: newMessages[lastIndex].content + chunk.data,
+              }
+            }
+            return newMessages
+          })
+          // 流式更新时也自动滚动到底部
+          setTimeout(() => scrollToBottom(), 0)
+        } else if (chunk.type === 'done') {
+          setLoading(false)
+        } else if (chunk.type === 'error') {
+          setLoading(false)
+          // 移除空的 assistant 消息，添加错误消息
+          setMessages(prev => {
+            const newMessages = [...prev]
+            if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant' && newMessages[newMessages.length - 1].content === '') {
+              newMessages.pop()
+            }
+            const errorMsg = typeof chunk.data === 'string' ? chunk.data : '发送消息时出错，请稍后重试。'
+            return [...newMessages, {
+              role: 'assistant',
+              content: errorMsg
+            }]
+          })
         }
+      }
+
+      // 调用流式 agent 接口
+      await sendAgentMessage(
+        selectedAgent,
+        userMessage.content,
+        currentSessionId,
+        onChunk
       )
 
-      // 如果没有通过流收到 session_id，使用返回值
-      if (!sessionId && receivedSessionId) {
-        setSessionId(receivedSessionId)
-      }
+      scrollToBottom()
     } catch (error) {
       console.error('发送消息失败:', error)
       // 移除空的 assistant 消息，添加错误消息
@@ -89,7 +124,7 @@ function ChatInterface({ agents = [] }: ChatInterfaceProps) {
         }
         return [...newMessages, {
           role: 'assistant',
-          content: '抱歉，发送消息时出错，请稍后重试。'
+          content: error instanceof Error ? error.message : '抱歉，发送消息时出错，请稍后重试。'
         }]
       })
       setLoading(false)
@@ -104,17 +139,28 @@ function ChatInterface({ agents = [] }: ChatInterfaceProps) {
   }
 
   const handleClearHistory = async () => {
-    if (!sessionId) return
+    const currentSessionId = agentSessions[selectedAgent]
+    if (!currentSessionId) {
+      // 如果没有 session_id，直接清空消息
+      setMessages([])
+      return
+    }
     
     try {
-      await clearHistoryApi(sessionId)
+      await clearAgentHistory(currentSessionId)
       setMessages([])
-      setSessionId(null)
+      setAgentSessions(prev => ({
+        ...prev,
+        [selectedAgent]: null,
+      }))
     } catch (error) {
       console.error('清除历史失败:', error)
       // 即使清除失败，也在前端清除显示
       setMessages([])
-      setSessionId(null)
+      setAgentSessions(prev => ({
+        ...prev,
+        [selectedAgent]: null,
+      }))
     }
   }
 
@@ -127,7 +173,12 @@ function ChatInterface({ agents = [] }: ChatInterfaceProps) {
             <select
               id="agent-select"
               value={selectedAgent}
-              onChange={(e) => setSelectedAgent(e.target.value)}
+              onChange={(e) => {
+                setSelectedAgent(e.target.value)
+                // 切换 agent 时可以选择清空消息或保留
+                // 这里选择保留消息，如果需要清空可以取消注释下面这行
+                // setMessages([])
+              }}
               disabled={loading}
             >
               {agents.map((agent) => (
