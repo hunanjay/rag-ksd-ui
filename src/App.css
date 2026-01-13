@@ -1,208 +1,47 @@
-.app {
+/* App 加载状态 */
+.app-loading {
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* 高度至少占满视口，高度可以随内容增长 */
-  width: 100vw; /* 宽度占满整个浏览器 */
-  margin: 0; /* 去掉左右居中留白 */
-  background: radial-gradient(circle at top, #f5f5f7 0, #e5e7eb 40%, #d1d5db 100%);
-  color: #111827;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-}
-
-.app-header {
-  padding: 1rem 2rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-  /* 顶部银色渐变 */
-  background: linear-gradient(90deg, #d3d3d3 0%, #f5f5f7 40%, #d3d3d3 100%);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-}
-
-.app-header h1 {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #111827;
-}
-
-.app-main {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.app-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  padding: 1.5rem 2rem 2rem;
-  box-sizing: border-box;
-  gap: 1.5rem;
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.app-header-left h1 {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.app-header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #374151;
-}
-
-.username {
-  font-weight: 500;
-}
-
-.admin-badge {
-  background: linear-gradient(135deg, #111827, #020617);
-  color: #ffffff;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.logout-button {
-  padding: 0.4rem 0.8rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(148, 163, 184, 0.8);
-  background: linear-gradient(135deg, #f9fafb, #e5e7eb);
-  color: #111827;
-  font-size: 0.875rem;
-  cursor: pointer;
-  box-shadow: 0 8px 16px rgba(148, 163, 184, 0.35);
-  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out,
-    background 0.15s ease-out;
-}
-
-.logout-button:hover {
-  background: linear-gradient(135deg, #ffffff, #e5e7eb);
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(148, 163, 184, 0.4);
-}
-
-.health-status {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.875rem;
-  color: #4b5563;
-}
-
-.health-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 9999px;
-  background-color: #9ca3af; /* unknown 默认灰色 */
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.5);
-}
-
-.health-ok {
-  background-color: #22c55e;
-}
-
-.health-error {
-  background-color: #ef4444;
-}
-
-.health-unknown {
-  background-color: #9ca3af;
-}
-
-.app-sidebar {
-  width: 220px;
-  border-radius: 1.2rem;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: radial-gradient(circle at top left, #f9fafb 0, #f3f4f6 50%, #e5e7eb 100%);
-  padding: 1.25rem;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
-}
-
-.app-sidebar h2 {
-  margin: 0 0 0.75rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.nav-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.nav-item {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.7rem;
-  font-size: 0.86rem;
-  color: #374151;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  cursor: pointer;
-  transition: background 0.15s ease-out, color 0.15s ease-out, transform 0.1s ease-out,
-    box-shadow 0.15s ease-out;
-}
-
-.nav-item.active {
-  background: linear-gradient(135deg, #111827, #020617);
-  color: #f9fafb;
-  border-color: #020617;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
-}
-
-.nav-item:hover {
-  background-color: #e5e7eb;
-  transform: translateY(-0.5px);
-}
-
-.app-main {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border-radius: 1.2rem;
-  background: radial-gradient(circle at top left, #f9fafb 0, #f3f4f6 40%, #e5e7eb 100%);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-}
-
-.auth-loading-container {
-  display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: radial-gradient(circle at top, #f5f5f7 0, #e5e7eb 40%, #d1d5db 100%);
+  background: #f8fafc;
+  gap: 16px;
 }
 
-.auth-loading-text {
-  font-size: 1rem;
-  color: #6b7280;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-loading p {
+  color: #64748b;
+  font-size: 0.9375rem;
+}
+
+/* Chat 页面特殊样式 */
+.chat-page {
+  height: calc(100vh - 132px);
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-page .chat-interface {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }

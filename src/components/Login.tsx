@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { login, register, type LoginRequest, type RegisterRequest } from '../services/auth'
+import { useState, useEffect } from 'react'
+import { login, register, getMicrosoftAuthUrl, getMicrosoftAuthStatus, type LoginRequest, type RegisterRequest } from '../services/auth'
 import { saveSession } from '../utils/session'
 import './Login.css'
 
@@ -14,6 +14,20 @@ function Login({ onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [microsoftConfigured, setMicrosoftConfigured] = useState(false)
+
+  // 检查 Microsoft OAuth 是否配置
+  useEffect(() => {
+    const checkMicrosoftAuth = async () => {
+      try {
+        const status = await getMicrosoftAuthStatus()
+        setMicrosoftConfigured(status.configured)
+      } catch (err) {
+        console.error('检查 Microsoft 配置失败:', err)
+      }
+    }
+    checkMicrosoftAuth()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,6 +59,21 @@ function Login({ onLoginSuccess }: LoginProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : '操作失败，请重试')
     } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMicrosoftLogin = async () => {
+    setError(null)
+    setLoading(true)
+    
+    try {
+      const authUrl = await getMicrosoftAuthUrl()
+      // 直接重定向到 Microsoft 登录页面
+      // 回调会由 /microsoft-callback.html 处理
+      window.location.href = authUrl
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Microsoft 登录失败')
       setLoading(false)
     }
   }
@@ -126,6 +155,28 @@ function Login({ onLoginSuccess }: LoginProps) {
             {loading ? '处理中...' : isLogin ? '登录' : '注册'}
           </button>
         </form>
+
+        {microsoftConfigured && isLogin && (
+          <>
+            <div className="login-divider">
+              <span>或</span>
+            </div>
+            <button
+              type="button"
+              className="microsoft-login-button"
+              onClick={handleMicrosoftLogin}
+              disabled={loading}
+            >
+              <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+              </svg>
+              使用 Microsoft 账户登录
+            </button>
+          </>
+        )}
 
         <div className="login-footer">
           <button
